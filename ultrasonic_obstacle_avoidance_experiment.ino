@@ -1,7 +1,7 @@
+Justin Almassi
+Nicholas Bell
+Zixuan Chen 
 
-Zixuan Chen <zixuan.chen@ryerson.ca>
-4:29 PM (2 minutes ago)
-to me
 
 //============================NICK==========================
 //Servo things
