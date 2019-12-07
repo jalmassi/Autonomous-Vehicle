@@ -1,11 +1,20 @@
+#include <Servo.h>
+
+#include <QTRSensors.h>
+
 //Justin Almassi 
 //Servo things
 //===============================================================
 #include <Servo.h>
+#include <QTRSensors.h>
+
+QTRSensors qtr;
 Servo myservo;
 int pos = 0;
 
 //===============================================================
+// right line sensor: 16, left line sensor: 53
+// right light sensor: 15, left light sensor: 14
 int Echo = A1;
 int Trig =A0;
 
@@ -32,16 +41,37 @@ int Left_motor_en=11;
 /*Set Button port*/
 int key=13;
 
-const int SensorRight = A6;     // Set Right Line Walking Infrared sensor port
-const int SensorLeft =A7;      // Set Left Line Walking Infrared sensor port
-int SL;    // State of Left Line Walking Infrared sensor
-int SR;    // State of Right Line Walking Infrared sensor
 
-const int lightR = A14;
-const int lightL = A15;
+const int lightR = A6;
+const int lightL = A7;
+const int lightC = A1;
+
+const int lightSideR = 15;
+const int lightSideL = 14;
+
+
+const int rightSensor = 53;
+const int leftSensor = 16;
 
 unsigned int lL;
 unsigned int rR;
+unsigned int cC;
+
+int rSensor;
+int lSensor;
+
+int rLightSide;
+int lLightSide;
+
+bool foundBall = false;
+
+uint16_t position;
+
+bool lightOn = false;
+
+const uint8_t SensorCount = 8;
+uint16_t sensorValues[SensorCount];
+
 
 void setup()
 {
@@ -65,18 +95,58 @@ void setup()
   pinMode(Echo2, INPUT);    // Set Echo port mode
   pinMode(Trig2, OUTPUT);   // Set Trig port mode
 
-  pinMode(SensorRight, INPUT); // Set Right Line Walking Infrared sensor as input
-  pinMode(SensorLeft, INPUT); // Set left Line Walking Infrared sensor as input
+
+  pinMode(lightL, INPUT); // Set left Line Walking Infrared sensor as input
+  pinMode(lightR, INPUT); // Set Right Line Walking Infrared sensor as input
+  pinMode(lightC, INPUT); // Set left Line Walking Infrared sensor as input
+
+  pinMode(lightSideR, INPUT);
+  pinMode(lightSideL, INPUT);
+
+  pinMode(rightSensor, INPUT);
+  pinMode(leftSensor, INPUT);
   
   myservo.attach(10);
- 
+
+  qtr.setTypeAnalog();
+  qtr.setSensorPins((const uint8_t[]){A15,A14,A13,A12,A11,A10,A9,A8}, SensorCount);
+  qtr.setEmitterPin(20);
+
+  //delay(500);
+  pinMode(20, OUTPUT);
+  digitalWrite(20, HIGH); 
+
+ for (uint16_t i = 0; i < 250; i++)
+  {
+    qtr.calibrate();
+    delay(20);
+  }
+  digitalWrite(20, LOW); // turn off Arduino's LED to indicate we are through with calibration
+
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    Serial.print(qtr.calibrationOn.minimum[i]);
+    Serial.print(' ');
+  }
+  Serial.println();
+
+  // print the calibration maximum values measured when emitters were on
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    Serial.print(qtr.calibrationOn.maximum[i]);
+    Serial.print(' ');
+  }
+  Serial.println();
+  Serial.println();
+  delay(1000);
+  
 }
 
 
 void run(int time)     // ahead
 {
- analogWrite(Left_motor_en,140);
-  analogWrite(Right_motor_en,140);  // Right motor enable
+ analogWrite(Left_motor_en,160);
+  analogWrite(Right_motor_en,160);  // Right motor enable
   digitalWrite(Right_motor_go,HIGH);  // right motor go ahead
   digitalWrite(Right_motor_back,LOW);   
   //analogWrite(Right_motor_go,200);//PWM--Pulse Width Modulation(0~255). right motor go speed is 255.
@@ -94,7 +164,7 @@ void brake(int time)         //STOP
   digitalWrite(Right_motor_back,LOW);
   digitalWrite(Left_motor_go,LOW);//Stop the left motor
   digitalWrite(Left_motor_back,LOW);
-  delay(time * 50);  //Running time can be adjusted  
+  delay(time * 200);  //Running time can be adjusted  
 }
 
 void left(int time)        //turn left
@@ -128,8 +198,8 @@ void spin_left(int time)   //Left rotation
 
 void line_left(int time)   //Left rotation
 {
-  analogWrite(Left_motor_en,100);
-  analogWrite(Right_motor_en,130);  // Right motor enable
+  analogWrite(Left_motor_en,120);
+  analogWrite(Right_motor_en,200);  // Right motor enable
   //digitalWrite(Right_motor_go,HIGH);  // right motor go ahead
   //digitalWrite(Right_motor_back,LOW);   
   analogWrite(Right_motor_go,255);//PWM--Pulse Width Modulation(0~255). right motor go speed is 255.
@@ -138,12 +208,12 @@ void line_left(int time)   //Left rotation
   //digitalWrite(Left_motor_back,LOW);
   analogWrite(Left_motor_go,0);//PWM--Pulse Width Modulation(0~255).left motor go speed is 135.
   analogWrite(Left_motor_back,255);
-  delay(time * 100);
+  delay(time * 65);
 }
 
 void line_right(int time)   //Left rotation
 {
-  analogWrite(Left_motor_en,150);
+  analogWrite(Left_motor_en,120);
   analogWrite(Right_motor_en,120);  // Right motor enable
   //digitalWrite(Right_motor_go,HIGH);  // right motor go ahead
   //digitalWrite(Right_motor_back,LOW);   
@@ -153,13 +223,13 @@ void line_right(int time)   //Left rotation
   //digitalWrite(Left_motor_back,LOW);
   analogWrite(Left_motor_go,255);//PWM--Pulse Width Modulation(0~255).left motor go speed is 135.
   analogWrite(Left_motor_back,0);
-  delay(time * 100); 
+  delay(time * 65); 
 }
 
 void right(int time)      //turn right
 {
- analogWrite(Left_motor_en,70);
- analogWrite(Right_motor_en,70);  // Right motor enable
+ analogWrite(Left_motor_en,150);
+ analogWrite(Right_motor_en,150);  // Right motor enable
   //digitalWrite(Right_motor_go,HIGH);  // right motor go ahead
   //digitalWrite(Right_motor_back,LOW);   
   //analogWrite(Right_motor_go,200);//PWM--Pulse Width Modulation(0~255). right motor go speed is 255.
@@ -173,8 +243,8 @@ void right(int time)      //turn right
 
 void spin_right(int time)   //Right rotation
 {
-analogWrite(Left_motor_en,100);
-  analogWrite(Right_motor_en,100);  // Right motor enable
+analogWrite(Left_motor_en,150);
+  analogWrite(Right_motor_en,150);  // Right motor enable
   //digitalWrite(Right_motor_go,HIGH);  // right motor go ahead
   //digitalWrite(Right_motor_back,LOW);   
   analogWrite(Right_motor_go,0);//PWM--Pulse Width Modulation(0~255). right motor go speed is 255.
@@ -294,234 +364,256 @@ void keysacn()
 }
 /*main loop*/
 //================================
-//Servo Look
-//================================
+bool lefty = false;
+bool righty = false;
+int count = 0;
 
-void servoLookForward() {
-  myservo.write(70);
-  delay(300);
-}
-void servoLookRight() {
-  myservo.write(40);
-  delay(300);
-}
-void servoLookLeft() {
-  myservo.write(120);
-  delay(300);
-}
-void lookDown() {
-  Distance_test();//Measuring front distance
-  Distance_test2();
-  }
-void response() {
-  if(Distance > 30|| Distance1 > 30 || Distance2 < 30)//The value is the distance that meets the obstacle, and can be set according to the actual situation  
-    {
-      Distance_test();//Measuring front distance
-      Distance_test1();
-      Distance_test2();
-      while(Distance > 30 || Distance1 > 30 || Distance2 < 30)//Determine whether there is an obstruction again.If there is obstacle , turn the direction and determine again.
-      {
-       back(1);  
-       spin_right(1);//Right rotation for 300ms
-       brake(1);//stop
-       
-       Distance_test();//Measuring front distance
-       Distance_test2();
-       
-         
+void left_corner(){
+  
+    if(sensorValues[7] >(sensorValues[4] + 500) && sensorValues[6] > (sensorValues[4] + 100) && righty == false){
+      if(count>7){
+        line_left(4);
+        lefty = true;
+        righty = false;
+        count = 0;
+        }
+     else{
+        line_left(2);
       }
     }
-    else
-         run(1);//There is nothing obstacled. Go ahead.
+    else{
+      run(1);
+    }
 }
 
-void responseBoth()
-{  
-    
-    lookDown();
-    if(Distance >15 || Distance2 >15)//The value is the distance that meets the obstacle, and can be set according to the actual situation   
-    { 
-      bool right = true;
-      lookDown();
-      while(Distance > 15 && Distance2 > 15)
-      {
-       brake(1);//stop
-       spin_left(6);//Right rotation for 300ms
-       brake(1);
-       right = false;
-       lookDown();
+void right_corner(){
+  if(sensorValues[0] >(sensorValues[3] + 500) && sensorValues[1] > (sensorValues[3] + 100) && lefty == false){
+      if(count>7){
+        line_right(5);
+        righty = true;
+        lefty = false;
+        count = 0;
       }
-      lookDown();
-      while(Distance > 15)
-      {
-       brake(1);//stop
-       spin_left(6);//Right rotation for 300ms
-       brake(1);
-       right = false;
-       lookDown();
+      else{
+        line_right(2);
       }
-      lookDown();
-      while(Distance2 > 15 && right == true)//Determine whether there is an obstruction again.If there is obstacle , turn the direction and determine again.
-      {
-       brake(1);//stop
-       spin_right(6);//Right rotation for 300ms
-       brake(1);
-        
-        lookDown();
-      }
-     
     }
-    else 
-         run(1);//There is nothing obstacled. Go ahead.
-       
-  }
+    else{
+      run(1);
+      }
+}
 
-void response2()
-{  
-    Distance_test1();
-    lookDown();
-    if(Distance1 < 15)//The value is the distance that meets the obstacle, and can be set according to the actual situation   
-    { 
-      Distance_test1();
-      lookDown();
-      while(Distance1 < 15)//Determine whether there is an obstruction again.If there is obstacle , turn the direction and determine again.
-      {
-       brake(1);//stop
-       spin_left(1);//Right rotation for 300ms
-       brake(1);
-        Distance_test1();
-        lookDown();
-      }
-    }
-    else 
-         run(1);//There is nothing obstacled. Go ahead.
-       
-  }
+void searchBall(){
+  while(!foundBall){
+     lightDetection();
+     Distance_test2();
+     if(Distance2<3){
+      foundBall = true;
+      brake(1);
+      closeClaw();
+     }
+     back(1);
+     brake(30);
+  } 
+}
 
- void response3()
-{  
-    Distance_test1();
-    if(Distance1 < 30)//The value is the distance that meets the obstacle, and can be set according to the actual situation   
-    { 
-      Distance_test1();
-      lookDown();
-      while(Distance1 < 30)//Determine whether there is an obstruction again.If there is obstacle , turn the direction and determine again.
-      {
-       brake(1);//stop
-       spin_left(3);//Right rotation for 300ms
-       brake(1);
-        Distance_test1();
-        lookDown();
-      }
-    }
-    
-       
-  }
+void checkLine(){
+  rLightSide = digitalRead(lightSideR);
+  lLightSide = digitalRead(lightSideL);
+  
+  Serial.println();
+  Serial.print("left:");
+  Serial.println(lLightSide);
+  Serial.print("right:");
+  Serial.println(rLightSide );
 
-void response4()
-{  
-    Distance_test1();
-    if(Distance1 < 30)//The value is the distance that meets the obstacle, and can be set according to the actual situation   
-    { 
-      Distance_test1();
-      lookDown();
-      while(Distance1 < 30)//Determine whether there is an obstruction again.If there is obstacle , turn the direction and determine again.
-      {
-       brake(1);//stop
-       spin_right(3);//Right rotation for 300ms
-       brake(1);
-        Distance_test1();
-        lookDown();
-      }
-    }
-    
-       
+  if(rLightSide==0 && lLightSide==0){
+    line_left(4);
+    searchBall();
   }
-void response5()
-{  
-    Distance_test1();
-    if(Distance1 < 30)//The value is the distance that meets the obstacle, and can be set according to the actual situation   
-    { 
-      Distance_test1();
-      lookDown();
-      while(Distance1 < 30)//Determine whether there is an obstruction again.If there is obstacle , turn the direction and determine again.
-      {
-       brake(1);//stop
-       spin_left(3);//Right rotation for 300ms
-       brake(1);
-        Distance_test1();
-        lookDown();
-      }
-    }
-    
-       
+  else if(rLightSide==0){
+    line_right(5);
+    searchBall();
   }
-int line = false;
+  else if(lLightSide==0){
+    line_left(4);
+    searchBall();
+  }
+  else{
+    run(1);
+  }
+}
+  
+void readLineSensors(){
+    position = qtr.readLineBlack(sensorValues);
+
+  for (uint8_t i = 0; i < SensorCount; i++)
+  {
+    Serial.print(sensorValues[i]);
+    Serial.print('\t');
+  }
+  Serial.println(position);
+}
+
 void followLine(){
-  SR = digitalRead(SensorRight);//Right Line Walking Infrared sensor against white undersurface,then LED[L2] light illuminates and while against black undersurface,LED[L2] goes off
-  SL = digitalRead(SensorLeft);//Left Line Walking Infrared sensor against white undersurface,then LED[L3] light illuminates and while against black undersurface,LED[L3] goes off
-  //Serial.println(SR);
-  //Serial.println(SL);
-  if (SL ==LOW&&SR== LOW)// Black lines were not detected at the same time
-    ;   // go ahead
-  else if (SL == LOW & SR == HIGH){// Left sensor against white undersurface and right against black undersurface , the car left off track and need to adjust to the right.
-    line_right(1);
-    Serial.println(SL);}
-  else if (SR == LOW & SL ==  HIGH){ // Rihgt sensor against white undersurface and left against black undersurface , the car right off track and need to adjust to the left.
-    line_left(1);}
-  else if (SR == HIGH & SL ==  HIGH){ //black lines at same time, go left
-    ;}
-    
+  
+  readLineSensors();
+  
+  rSensor = digitalRead(rightSensor); //black line gives 1
+  lSensor = digitalRead(leftSensor);
+  Serial.print("rSensor: ");
+  Serial.println(rSensor);
+ 
+  Serial.print("lSensor: ");
+  Serial.println(lSensor);
+  Serial.println("");
+
+  
+  
+  count += 1;
+  if(count>3){
+    lefty = false;
+    righty = false;
   }
+
+  if(lSensor==1){
+    line_left(4);
+  }
+  else if(rSensor == 1){
+    line_right(4);
+  }
+  else{
+    if(position < 6000 && position > 1000){
+      
+      /*if(sensorValues[6]<(sensorValues[4]+500) && sensorValues[1]>(sensorValues[3]+500)){ //line in middle of sensors or on both sides of sensors
+        int random = rand() % 2;
+        if(random==0)
+          left_corner();
+        else{
+          right_corner();
+        }
+      }*/
+  
+      if(sensorValues[2] > (sensorValues[3]+200) || sensorValues[1] > (sensorValues[3]+200) || sensorValues[0] > (sensorValues[3]+200)){
+        line_right(1);
+      }
+      
+      else if(sensorValues[5] > (sensorValues[4]+200) || sensorValues[6] > (sensorValues[4]+200) || sensorValues[7] > (sensorValues[4]+200)){
+        line_left(1);
+      }
+      else{
+        run(1);
+      }
+      
+    
+    }
+    else if(position>6500 || position<100){
+      if(sensorValues[7]<200 && sensorValues[0]<200){
+        checkLine();
+      }
+    }
+    /*else if(position>=6000){
+      line_left(1);
+    }
+  
+    else if(position<=1000){
+      line_right(1);
+    }*/
+  }
+}
+
+  
+//  if(sensorValues[3]<100 && sensorValues[4]<100 && sensorValues[5]<100 && (position>6500 || position<500)){
+//    brake(1);
+//    Serial.println("no line");
+//  }
+//  else if(position<2000){
+//    line_right(4);
+//  }
+//  else if(position<3000){
+//    line_right(1);
+//  }
+//  else if(position>6000){
+//    line_left(3);
+//  }
+//  else if(position>5000){
+//    line_left(1);
+//  }
+
+//light detection functions
 void detect(){
   lL = analogRead(lightL);
   rR = analogRead(lightR);
-  //Serial.print(lL);
-  //Serial.println(rR);
-  delay(500);
-  while(lL <= 100 || rR <= 100){
+  cC = analogRead(lightC);
+  rR -= 50;
+  Serial.println();
+  Serial.print("left:");
+  Serial.println(lL);
+  Serial.print("right:");
+  Serial.println(rR);
+  Serial.print("centre:");
+  Serial.println(cC);
+  //delay(500);
+  /*while(lL <= 100 || rR <= 100){
     lL = analogRead(lightL);
     rR = analogRead(lightR);
     brake(1);
-  }
+  }*/
 }
+
 void lightDetection(){
   detect();
-  //Serial.println(rR);
-  //delay(500);
-  if(rR < (lL - 50)){
-    spin_right(1);
-    brake(1);
-    //detect();
+
+  if(cC < 305 && cC < lL && cC < rR){
+    while(cC < 305){
+      lightOn = false;
+      brake(1);
+      detect();}}
+   else if(rR < (lL - 50) && rR < 400){
+    while(rR < (lL - 50)){
+      Serial.println("go right");
+      lightOn = true;
+      spin_right(1);
+      brake(1);
+    detect();}
   }
-  else if(lL < (rR - 50)){
-    spin_left(1);
-    brake(1);
+  else if(lL < (rR - 50) && lL < 400){
+    while(lL < (rR - 50)){
+      Serial.println("go left");
+      lightOn = true;
+      spin_left(1);
+      brake(1);
+      detect();
+    }}
     //detect();
+
   }
-  
-}
+
+
+  //claw functions
+  void openClaw(){
+    myservo.write(360);
+    delay(100);
+    Serial.println("servo open");
+  }
+  void closeClaw(){
+    myservo.write(45);
+    delay(100);
+    Serial.println("close claw");
+  }
+
 
 void loop()
 {
+  openClaw();
   keysacn();//Press the button to start
  
   while(1)
   {
-  responseBoth();
-  brake(1);
-  servoLookRight();
-  response5();
-    
-  servoLookForward();
-  response3();
-    
-    
-  servoLookLeft();
-  response4();
     
   followLine();
+  brake(1);
+  //lightDetection();
   
-  lightDetection();
   }
 }
