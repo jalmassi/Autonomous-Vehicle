@@ -59,6 +59,9 @@ int lSensor;
 int rLightSide;
 int lLightSide;
 
+int rStartingLightSide;
+int lStartingLightSide;
+
 bool foundBall = false;
 
 uint16_t position;
@@ -81,12 +84,6 @@ void setup()
   pinMode(Left_motor_en,OUTPUT);// PIN 11 (PWM)
   
 //  myservo.write(90);
-  
-  pinMode(Echo, INPUT);    // Set Echo port mode
-  pinMode(Trig, OUTPUT);   // Set Trig port mode
-
-  pinMode(Echo1, INPUT);    // Set Echo port mode
-  pinMode(Trig1, OUTPUT);   // Set Trig port mode
 
   pinMode(Echo2, INPUT);    // Set Echo port mode
   pinMode(Trig2, OUTPUT);   // Set Trig port mode
@@ -134,7 +131,10 @@ void setup()
   }
   Serial.println();
   Serial.println();
-  delay(1000);
+
+  rStartingLightSide = digitalRead(lightSideR);
+  lStartingLightSide = digitalRead(lightSideL);
+  rStartingLightSide -= 50;
   
 }
 
@@ -285,7 +285,7 @@ void spin(int time){
 
 
 
-void Distance_test()   // Measuring front distance
+/*void Distance_test()   // Measuring front distance
 {
   digitalWrite(Trig, LOW);    // set trig port low level for 2μs
   delayMicroseconds(2);
@@ -293,7 +293,7 @@ void Distance_test()   // Measuring front distance
   delayMicroseconds(10);
   digitalWrite(Trig, LOW);    // set trig port low level
   float Fdistance = pulseIn(Echo, HIGH);  // Read echo port high level time(unit:μs)
-  Fdistance= Fdistance/58;       // Distance(m) =(time(s) * 344(m/s)) / 2     /****** The speed of sound is 344m/s.*******/
+  Fdistance= Fdistance/58;       // Distance(m) =(time(s) * 344(m/s)) / 2     /****** The speed of sound is 344m/s.*******
                                  //  ==> 2*Distance(cm) = time(μs) * 0.0344(cm/μs)
                                  // ==> Distance(cm) = time(μs) * 0.0172 = time(μs) / 58
   Serial.print("Distance:");      //Output Distance(cm)
@@ -309,13 +309,13 @@ void Distance_test1()   // Measuring front distance
   delayMicroseconds(10);
   digitalWrite(Trig1, LOW);    // set trig port low level
   float Fdistance = pulseIn(Echo1, HIGH);  // Read echo port high level time(unit:μs)
-  Fdistance= Fdistance/58;       // Distance(m) =(time(s) * 344(m/s)) / 2     /****** The speed of sound is 344m/s.*******/
+  Fdistance= Fdistance/58;       // Distance(m) =(time(s) * 344(m/s)) / 2     /****** The speed of sound is 344m/s.*******
                                  //  ==> 2*Distance(cm) = time(μs) * 0.0344(cm/μs)
                                  // ==> Distance(cm) = time(μs) * 0.0172 = time(μs) / 58
   Serial.print("Distance1:");      //Output Distance(cm)
   Serial.println(Fdistance);         //display distance
   Distance1 = Fdistance;
-}  
+}*/
 
 int Distance_test2()   // Measuring front distance
 {
@@ -416,6 +416,7 @@ void searchBall(){
 void checkLine(){
   rLightSide = digitalRead(lightSideR);
   lLightSide = digitalRead(lightSideL);
+  rLightSide -= 50;
   
   Serial.println();
   Serial.print("left:");
@@ -423,15 +424,15 @@ void checkLine(){
   Serial.print("right:");
   Serial.println(rLightSide );
 
-  if(rLightSide==0 && lLightSide==0){
+  if(rLightSide<(rStartingLightSide-100) && lLightSide<(lStartingLightSide-100)){
     line_left(4);
     searchBall();
   }
-  else if(rLightSide==0){
+  else if(rLightSide<(rStartingLightSide-100)){
     line_right(5);
     searchBall();
   }
-  else if(lLightSide==0){
+  else if(lLightSide<(lStartingLightSide-100)){
     line_left(4);
     searchBall();
   }
@@ -487,15 +488,7 @@ void followLine(){
   else{
     if(position < 6000 && position > 1000){
       
-      /*if(sensorValues[6]<(sensorValues[4]+500) && sensorValues[1]>(sensorValues[3]+500)){ //line in middle of sensors or on both sides of sensors
-        int random = rand() % 2;
-        if(random==0)
-          left_corner();
-        else{
-          right_corner();
-        }
-      }*/
-  
+
       if(sensorValues[2] > (sensorValues[3]+200) || sensorValues[1] > (sensorValues[3]+200) || sensorValues[0] > (sensorValues[3]+200)){
         line_right(1);
       }
@@ -514,33 +507,10 @@ void followLine(){
         checkLine();
       }
     }
-    /*else if(position>=6000){
-      line_left(1);
-    }
-  
-    else if(position<=1000){
-      line_right(1);
-    }*/
   }
 }
 
   
-//  if(sensorValues[3]<100 && sensorValues[4]<100 && sensorValues[5]<100 && (position>6500 || position<500)){
-//    brake(1);
-//    Serial.println("no line");
-//  }
-//  else if(position<2000){
-//    line_right(4);
-//  }
-//  else if(position<3000){
-//    line_right(1);
-//  }
-//  else if(position>6000){
-//    line_left(3);
-//  }
-//  else if(position>5000){
-//    line_left(1);
-//  }
 
 //light detection functions
 void detect(){
