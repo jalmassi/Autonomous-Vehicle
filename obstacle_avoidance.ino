@@ -15,11 +15,7 @@ int pos = 0;
 //===============================================================
 // right line sensor: 16, left line sensor: 53
 // right light sensor: 15, left light sensor: 14
-int Echo = A1;
-int Trig =A0;
 
-int Echo1 = A3;
-int Trig1 = A2;
 
 int Echo2 = A4;
 int Trig2 = A5;
@@ -46,8 +42,8 @@ const int lightR = A6;
 const int lightL = A7;
 const int lightC = A1;
 
-const int lightSideR = 15;
-const int lightSideL = 14;
+const int lightSideR = A3;
+const int lightSideL = A2;
 
 
 const int rightSensor = 53;
@@ -471,15 +467,21 @@ void followLine(){
   
   
   count += 1;
-  if(count>3){
+  if(count>10){
     lefty = false;
     righty = false;
   }
 
   if(lSensor==1){
+    count = 0;
+    lefty = true;
+    righty = false;
     line_left(4);
   }
   else if(rSensor == 1){
+    count = 0;
+    righty = true;
+    lefty = false;
     line_right(4);
   }
   else{
